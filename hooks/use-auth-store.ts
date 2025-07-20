@@ -9,14 +9,20 @@ const CURRENT_USER_KEY = 'aura-battle-current-user';
 
 export const [AuthContext, useAuth] = createContextHook(() => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const queryClient = useQueryClient();
 
   // Load users from storage
   const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const storedUsers = await AsyncStorage.getItem(USERS_STORAGE_KEY);
-      return storedUsers ? JSON.parse(storedUsers) as User[] : [];
+      try {
+        const storedUsers = await AsyncStorage.getItem(USERS_STORAGE_KEY);
+        return storedUsers ? JSON.parse(storedUsers) as User[] : [];
+      } catch (error) {
+        console.error('Failed to load users:', error);
+        return [];
+      }
     }
   });
 
@@ -28,6 +34,8 @@ export const [AuthContext, useAuth] = createContextHook(() => {
         if (userId) setCurrentUserId(userId);
       } catch (error) {
         console.error('Failed to load current user:', error);
+      } finally {
+        setIsInitialized(true);
       }
     };
     loadCurrentUser();
@@ -92,8 +100,12 @@ export const [AuthContext, useAuth] = createContextHook(() => {
 
   // Logout
   const logout = async () => {
-    await AsyncStorage.removeItem(CURRENT_USER_KEY);
-    setCurrentUserId(null);
+    try {
+      await AsyncStorage.removeItem(CURRENT_USER_KEY);
+      setCurrentUserId(null);
+    } catch (error) {
+      console.error('Failed to logout:', error);
+    }
   };
 
   // Get current user
@@ -113,8 +125,8 @@ export const [AuthContext, useAuth] = createContextHook(() => {
   return {
     users: usersQuery.data || [],
     currentUser,
-    isLoading: usersQuery.isLoading,
-    isAuthenticated: !!currentUserId,
+    isLoading: usersQuery.isLoading || !isInitialized,
+    isAuthenticated: !!currentUserId && isInitialized,
     createUser,
     login,
     logout,

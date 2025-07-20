@@ -5,7 +5,12 @@ import { useAuth } from "@/hooks/use-auth-store";
 import { Redirect } from "expo-router";
 
 export default function TabLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return null;
+  }
   
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
